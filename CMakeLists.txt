@@ -125,6 +125,7 @@ if (APPLE)
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/lego.png")
 elseif(EMSCRIPTEN)
     # on the web, we have to put the files inside of the webassembly
     # somewhat unintuitively, this is done via a linker argument.
@@ -132,6 +133,7 @@ elseif(EMSCRIPTEN)
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/lego.png@/\""
     )
 else()
     if (ANDROID)
@@ -159,6 +161,7 @@ else()
     copy_helper("Inter-VariableFont.ttf")
     copy_helper("the_entertainer.ogg")
     copy_helper("gs_tiger.svg")
+    copy_helper("lego.png")
 endif()
 
 # set some extra configs for each platform
