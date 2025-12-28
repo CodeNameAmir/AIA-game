@@ -40,6 +40,8 @@ endif()
 target_sources(${EXECUTABLE_NAME} 
 PRIVATE 
     src/main.cpp
+    src/menu.cpp
+    src/TicTacToe.cpp
     src/iosLaunchScreen.storyboard
 )
 # What is iosLaunchScreen.storyboard? This file describes what Apple's mobile platforms
@@ -125,7 +127,20 @@ if (APPLE)
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg")
-    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/lego.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/logo.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/logobg.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/tictactoe_bg.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/tic_tac_toe.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/chess.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/memory.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/seabattle.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/snake_ladder.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/yatzi.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/dots_boxes.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/about.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/setting.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/exit.png")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/icons/sidemenuitem.png")
 elseif(EMSCRIPTEN)
     # on the web, we have to put the files inside of the webassembly
     # somewhat unintuitively, this is done via a linker argument.
@@ -133,7 +148,20 @@ elseif(EMSCRIPTEN)
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg@/\""
-        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/lego.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/logo.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/logobg.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/tictactoe_bg.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/tic_tac_toe.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/chess.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/memory.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/seabattle.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/snake_ladder.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/yatzi.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/dots_boxes.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/about.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/setting.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/exit.png@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/icons/sidemenuitem.png@/\""
     )
 else()
     if (ANDROID)
@@ -161,7 +189,20 @@ else()
     copy_helper("Inter-VariableFont.ttf")
     copy_helper("the_entertainer.ogg")
     copy_helper("gs_tiger.svg")
-    copy_helper("lego.png")
+    copy_helper("logo.png")
+    copy_helper("logobg.png")
+    copy_helper("tictactoe_bg.png")
+    copy_helper("icons/tic_tac_toe.png")
+    copy_helper("icons/chess.png")
+    copy_helper("icons/memory.png")
+    copy_helper("icons/seabattle.png")
+    copy_helper("icons/snake_ladder.png")
+    copy_helper("icons/yatzi.png")
+    copy_helper("icons/dots_boxes.png")
+    copy_helper("icons/about.png")
+    copy_helper("icons/setting.png")
+    copy_helper("icons/exit.png")
+    copy_helper("icons/sidemenuitem.png")
 endif()
 
 # set some extra configs for each platform
