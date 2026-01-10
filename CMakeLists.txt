@@ -90,6 +90,7 @@ set(SDLIMAGE_AVIF OFF)	# disable formats we don't use to make the build faster a
 set(SDLIMAGE_BMP OFF)
 set(SDLIMAGE_JPEG OFF)
 set(SDLIMAGE_WEBP OFF)
+set(SDLIMAGE_PNG_LIBPNG OFF)    # SDL3 includes built-in support for loading PNGs. If you need more than what that supports, enable this option.
 add_subdirectory(SDL_image EXCLUDE_FROM_ALL)
 
 # Link SDL to our executable. This also makes its include directory available to us. 
@@ -99,16 +100,6 @@ target_link_libraries(${EXECUTABLE_NAME} PUBLIC
 	SDL3_image::SDL3_image	# remove if you are not using SDL_image
     SDL3::SDL3              # If using satelite libraries, SDL must be the last item in the list. 
 )
-
-# SDL_Image bug: https://github.com/libsdl-org/SDL_image/issues/506
-if (APPLE AND NOT BUILD_SHARED_LIBS)
-    find_library(IO_LIB ImageIO REQUIRED)
-    find_library(CS_LIB CoreServices REQUIRED)
-    find_library(CT_LIB CoreText REQUIRED)
-    find_library(CG_LIB CoreGraphics REQUIRED)
-    find_library(CF_LIB CoreFoundation REQUIRED)
-    target_link_libraries(${EXECUTABLE_NAME} PUBLIC ${CF_LIB} ${CT_LIB} ${IO_LIB} ${CS_LIB} ${CG_LIB})
-endif()
 
 # Dealing with assets
 # We have some non-code resources that our application needs in order to work. How we deal with those differs per platform.
