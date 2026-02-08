@@ -1,15 +1,14 @@
 #pragma once
+
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_mixer/SDL_mixer.h>
 
 #include <vector>
+
 #include "slider.h"
 #include "Menu.h"
 #include "TicTacToe.h"
-// struct Slider;
-// struct Menu;
-// struct TicTacToe;
 
 enum class GameState {
     Menu,
@@ -21,17 +20,20 @@ struct App {
     std::vector<SideButton> sideButtons;
 
     int hoveredIndex = -1;
-    // Core
+
     Menu menu;
     TicTacToe tic;
     GameState state = GameState::Menu;
-    SDL_Window*   window   = nullptr;
+
+    SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_AppResult quitState = SDL_APP_CONTINUE;
-    float scalex=1.0;
-    float scaley=1.0;
-    float scale=1.0;
-    int WIDTH,HEIGHT;
+
+    float scalex = 1.0f;
+    float scaley = 1.0f;
+    float scale = 1.0f;
+    int WIDTH = 0;
+    int HEIGHT = 0;
 
     // -------- Audio --------
     MIX_Mixer* mixer = nullptr;
@@ -42,14 +44,8 @@ struct App {
 
     // -------- Text --------
     TTF_Font* font = nullptr;
-    //mouse position
     float mouseX = 0.0f;
     float mouseY = 0.0f;
-
-    // -------- Textures --------
-    
-
-    
 
     // -------- FPS --------
     Uint64 lastCounter = 0;
@@ -62,7 +58,4 @@ struct App {
     double FRAME_TIME = 1000.0 / targetFPS; // ms
     SDL_Texture* fpsTex = nullptr;
     SDL_FRect fpsRect{};
-
-    
-
 };
