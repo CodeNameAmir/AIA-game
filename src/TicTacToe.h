@@ -1,9 +1,10 @@
 #pragma once
+
 #include <SDL3/SDL.h>
 
 struct TicTacToe {
-    int board[3][3];
-    bool xTurn;
+    int board[3][3]{};
+    bool xTurn = true;
 
     SDL_Texture* background = nullptr;
     SDL_FRect bgRect{0, 0, 0, 0};
