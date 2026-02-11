@@ -50,8 +50,6 @@ void InitMenu(App* app,int T) {
         item.ui.rect = item.ui.baserect;
         app->menuItems.push_back(item);
 
-        // SDL_Log("%i",MenuItemNames[i]);
-        // std::cout << MenuItemNames[i]<< std::endl;
         const std::string_view text = MenuItemNames[i];
         SDL_Surface* msgSurf = TTF_RenderText_Solid(font, text.data(), text.length(), {105,105,105,255});
         app->menuItems[i].label = SDL_CreateTextureFromSurface(app->renderer, msgSurf);
@@ -100,13 +98,14 @@ void Menu_Init(Menu& game, SDL_Renderer* renderer, App* app) {
     auto props = SDL_GetTextureProperties(game.logobgTex);
     game.logobaseRect.w = (float)SDL_GetNumberProperty(props, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0)/2;
     game.logobaseRect.h = (float)SDL_GetNumberProperty(props, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0)/2;
-
     game.logobaseRect.x = (app->WIDTH - game.logobaseRect.w)/2;
     game.logobaseRect.y = 10;
+
     game.logobgbaseRect.x = game.logobaseRect.x - 20;
     game.logobgbaseRect.y = game.logobaseRect.y - 15;
     game.logobgbaseRect.w = game.logobaseRect.w + 40;
     game.logobgbaseRect.h = game.logobaseRect.h + 30;
+
     game.logoRect = game.logobaseRect;
     game.logobgRect = game.logobgbaseRect;
     const char* icons[] = {
@@ -122,7 +121,7 @@ void Menu_Init(Menu& game, SDL_Renderer* renderer, App* app) {
     InitMenu(app,sizeof(icons)/sizeof(icons[0]));
     // InitSidePanel(app);
     //sidemenuitem background
-    game.sidemenuitembgTex = LoadIcon(renderer,(basePath / "icons/sidemenuitem.png").string().c_str());
+    game.sidemenuitembgTex = LoadIcon(renderer,(basePath / "sidemenuitem.png").string().c_str());
     SDL_SetTextureAlphaMod(game.sidemenuitembgTex, 100);
     game.sidemenuitembgbaseRect={app->WIDTH-84*app->scale,472,313,664};
     game.sidemenuitembgRect=game.sidemenuitembgbaseRect;
@@ -190,9 +189,6 @@ void Menu_HandleEvent(Menu& game, SDL_Event* e) {
     }
     }
 }
-void Menu_Update(Menu&) {
-    // منطق بازی بعداً اینجا میاد
-}
 
 
 void Menu_Render(Menu& game, SDL_Renderer* renderer) {
@@ -213,13 +209,6 @@ void Menu_Render(Menu& game, SDL_Renderer* renderer) {
         lr.x = item.ui.rect.x + (item.ui.rect.w - lr.w) / 2;
         SDL_RenderTexture(game.app->renderer, item.label, nullptr, &lr);
     }
-    // game.sidemenuitembgRect=game.app->sideButtons[0].ui.rect;
-//     for (auto& b : game.app->sideButtons) {
-//     UpdateHover(b.ui, game.app->mouseX, game.app->mouseY);
-//     RendersidepanelItem(renderer, b.ui, game.app->scale,game.app,game.app->menu);
-//     // std::cout << b.ui.rect.x<<" x "<<b.ui.rect.y<<"\t"<<b.ui.rect.w<<" x "<<b.ui.rect.h << std::endl;
-    
-// }
 
 }
     SidePanel_Render(game.app, renderer);

@@ -11,14 +11,12 @@ constexpr int WINDOW_WIDTH  = 1280;
 constexpr int WINDOW_HEIGHT = 720;
 
 
-
 // --------------------------------------------------
 // App State
 // --------------------------------------------------
 struct Star {
     float x, y;
     float speed;
-    // Uint8 alpha;
 };
 std::vector<Star> stars;
 
@@ -26,6 +24,7 @@ SDL_AppResult Fail(const char* msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s: %s", msg, SDL_GetError());
     return SDL_APP_FAILURE;
 }
+
 std::filesystem::path GetBasePath() {
 #if __ANDROID__
     return "";
@@ -35,6 +34,7 @@ std::filesystem::path GetBasePath() {
     return std::filesystem::path(base);
 #endif
 }
+
 SDL_Texture* LoadIcon(SDL_Renderer* r, const std::string& path) {
     SDL_Surface* s = IMG_Load(path.c_str());
     if (!s) {
@@ -45,6 +45,7 @@ SDL_Texture* LoadIcon(SDL_Renderer* r, const std::string& path) {
     SDL_DestroySurface(s);
     return t;
 }
+
 void ApplyUIScale(float scale,SDL_FRect& item,const SDL_FRect& itembase) {
         item.x = itembase.x * scale;
         item.y = itembase.y * scale;
@@ -56,9 +57,8 @@ void InitSidePanel(App* app)
     float gap = 20.0f;
     float size = 56.0f;
 
-    float rightMargin = 20.0f;   // فاصله از راست
-    float bottomMargin = 20.0f;  // فاصله از پایین
-
+    float rightMargin = 20.0f;   // right margin
+    float bottomMargin = 20.0f;  // bottom margin
     float panelX = 1280 - rightMargin - size;
     float startY = 720 - bottomMargin - (size * 3 + gap * 2);
     
@@ -85,7 +85,7 @@ bool PointInRect(float mx, float my, const SDL_FRect& r) {
 void UpdateHover(UIItem& item, float mx, float my) {
     item.hovered = PointInRect(mx, my, item.rect);
 }
-void RendersidepanelItem(SDL_Renderer* r, UIItem& item, float uiScale,App* app,Menu& game) {
+void RenderUIItem(SDL_Renderer* r, UIItem& item, float uiScale,App* app,Menu& game) {
     float scale = item.hovered ? item.hoverScale : 1.0f;
     Uint8 alpha = item.hovered ? item.hoverAlpha : item.normalAlpha;
 
@@ -107,14 +107,9 @@ void RendersidepanelItem(SDL_Renderer* r, UIItem& item, float uiScale,App* app,M
 void SidePanel_Render(App* app, SDL_Renderer* r) {
     for (auto& b : app->sideButtons) {
         UpdateHover(b.ui, app->mouseX, app->mouseY);
-        RendersidepanelItem(r, b.ui, app->scale, app, app->menu);
+        RenderUIItem(r, b.ui, app->scale, app, app->menu);
     }
 }
-
-// --------------------------------------------------
-// Utility
-// --------------------------------------------------
-
 
 
 // --------------------------------------------------
@@ -175,18 +170,15 @@ SDL_AppResult SDL_AppInit(void** state, int, char**) {
     if (!MIX_Init()) return Fail("MIX_Init");
 
     auto* app = new App();
-    
-    
-
 
     app->window = SDL_CreateWindow("AIA game",WINDOW_WIDTH, WINDOW_HEIGHT,SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     app->WIDTH=WINDOW_WIDTH;
     app->HEIGHT=WINDOW_HEIGHT;
-    // بعد از SDL_CreateWindow و قبل از return
+    
     SDL_DisplayID display = SDL_GetDisplayForWindow(app->window);
     const SDL_DisplayMode* current_mode = SDL_GetCurrentDisplayMode(display);
     int refresh_rate = (int)SDL_roundf(current_mode->refresh_rate);
-    // Volume slider
+    /*  // Volume slider
     app->volumeSlider = {
         .bar = {50, 330, 200, 8},
         .knob = {50+200*app->volume, 324, 12, 20},
@@ -203,7 +195,7 @@ SDL_AppResult SDL_AppInit(void** state, int, char**) {
     .minValue = 30.0f,
     .maxValue = float(refresh_rate),
     .value = &app->targetFPSFloat
-};
+    };  */
     if (!app->window) return Fail("CreateWindow");
 
     app->renderer = SDL_CreateRenderer(app->window, nullptr);
@@ -219,9 +211,6 @@ SDL_AppResult SDL_AppInit(void** state, int, char**) {
     // Font
     app->font = TTF_OpenFont((basePath / "Inter-VariableFont.ttf").string().c_str(), 36);
     if (!app->font) return Fail("OpenFont");
-
-    
-    
     
     *state = app;
     //audio
@@ -273,16 +262,14 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
         app->scaley=(float)app->HEIGHT/WINDOW_HEIGHT;
         app->scale = app->scalex>app->scaley ? app->scaley:app->scalex;
         SDL_Log("Window size: %ix%i", app->WIDTH, app->HEIGHT);
-        // std::cout<<app->scalex<<"\t"<<app->scaley<<"\t\t"<<app->scale<<"\t"<<std::endl;
+        
         InitStars(int(app->WIDTH*app->HEIGHT/7680), app->WIDTH, app->HEIGHT);
-        // SDL_Log("tedat setare ha : %i",int(app->WIDTH*app->HEIGHT/7680));
 
     }
     if (e->type == SDL_EVENT_MOUSE_MOTION) {
         app->mouseX = e->motion.x;
         app->mouseY = e->motion.y;
 
-        // SDL_Log("Mouse position: X=%.1f Y=%.1f", app->mouseX, app->mouseY);
     }
         
 
@@ -297,18 +284,9 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
         }
     
     }
-        // float mx = e->button.x;
-        // float my = e->button.y;
 
-        // auto hit = [&](SDL_FRect& r) {
-        //     return mx >= r.x && mx <= r.x + r.w &&
-        //         my >= r.y && my <= r.y + r.h;
-        // };
-
-        // if (hit(app->volumeSlider.knob)) app->volumeSlider.dragging = true;
-        // if (hit(app->fpsSlider.knob)) app->fpsSlider.dragging = true;
     }
-    if (e->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+/*  if (e->type == SDL_EVENT_MOUSE_BUTTON_UP) {
         app->volumeSlider.dragging = false;
         app->fpsSlider.dragging = false;
     }
@@ -332,15 +310,11 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
         updateSlider(app->fpsSlider);
 
         MIX_SetTrackGain(app->musicTrack, app->volume);
-    }
+    }   */
 
     if (e->type == SDL_EVENT_KEY_DOWN) {
-    // std::cout << char(e->key.key) << std::endl;
-    // SDL_Keycode key = e->key.key;
     
     switch (e->key.key) {
-
-
     case SDLK_Q:
         app->quitState = SDL_APP_SUCCESS;
         break;
@@ -358,7 +332,7 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
         }
         app->musicPaused = !app->musicPaused;
         break;
-
+    //volume control
     case SDLK_UP:
         app->volume += 0.1f;
         if (app->volume > 1.0f) app->volume = 1.0f;
@@ -422,13 +396,13 @@ SDL_AppResult SDL_AppIterate(void* state) {
         // SDL_Log("FPS: %.1f", app->fps);
     }
     
-    // auto drawSlider = [&](Slider& s) {
-    // SDL_SetRenderDrawColor(app->renderer, 120,120,120,255);
-    // SDL_RenderFillRect(app->renderer, &s.bar);
+    /*auto drawSlider = [&](Slider& s) {
+    SDL_SetRenderDrawColor(app->renderer, 120,120,120,255);
+    SDL_RenderFillRect(app->renderer, &s.bar);
 
-    // SDL_SetRenderDrawColor(app->renderer, 255,255,255,255);
-    // SDL_RenderFillRect(app->renderer, &s.knob);
-    // };
+    SDL_SetRenderDrawColor(app->renderer, 255,255,255,255);
+    SDL_RenderFillRect(app->renderer, &s.knob);
+    };*/
 
     
     
@@ -436,25 +410,23 @@ SDL_AppResult SDL_AppIterate(void* state) {
     // float t = SDL_GetTicks() / 1000.0f;
     SDL_SetRenderDrawColor(app->renderer,14, 46, 92, 255);
     SDL_RenderClear(app->renderer);
+    SDL_SetRenderDrawColor(app->renderer,14, 46, 92, 255);
 
     UpdateStars(app->WIDTH, app->HEIGHT,app->renderer);
 
     // SDL_SetRenderDrawColor(app->renderer,(Uint8)((std::sin(t) + 1) * 127),(Uint8)((std::sin(t * 0.5f) + 1) * 127),200,255);
 
     if (app->state == GameState::Menu) {
-        Menu_Update(app->menu);
         Menu_Render(app->menu, app->renderer);
         // drawSlider(app->volumeSlider);
         // drawSlider(app->fpsSlider);
         
     }
     else if (app->state == GameState::TIC_TAC_TOE) {
-        TicTacToe_Update(app->tic);
         TicTacToe_Render(app->tic, app->renderer);
     }
         SDL_RenderTexture(app->renderer, app->fpsTex, nullptr, &app->fpsRect);
-    // SDL_FRect rect = { 0.0f, 0.0f, WINDOW_WIDTH*app->scale, WINDOW_HEIGHT*app->scale };
-    //     SDL_RenderRect(app->renderer, &rect);
+        
         SDL_RenderPresent(app->renderer);
 
     // ---------------- FPS CAP ----------------

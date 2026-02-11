@@ -30,7 +30,7 @@ struct App {
     // Core
     Menu menu;
     TicTacToe tic;
-    GameState state = GameState::Menu;
+    GameState state = GameState::TIC_TAC_TOE;
     SDL_Window*   window   = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_AppResult quitState = SDL_APP_CONTINUE;
@@ -51,11 +51,6 @@ struct App {
     //mouse position
     float mouseX = 0.0f;
     float mouseY = 0.0f;
-
-    // -------- Textures --------
-    
-
-    
 
     // -------- FPS --------
     Uint64 lastCounter = 0;

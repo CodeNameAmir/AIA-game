@@ -87,47 +87,55 @@ bool IsBoardFull(int board[3][3]) {
 void TicTacToe_Init(TicTacToe& game, SDL_Renderer* renderer, App* app) {
     auto basePath = GetBasePath();
     game.app=app;
-    UIItem replay; 
     //Win Card
     game.winCardBaseRect = {game.app->WIDTH / 2.f - 220,game.app->HEIGHT / 2.f - 150,440,300};
     game.winCardRect = game.winCardBaseRect;
+
     game.winCardtextbaseRect = {game.winCardRect.x + (game.winCardRect.w - 187) / 2,game.winCardRect.y + 18 * game.app->scale,187,44};
     game.winCardtextRect = game.winCardtextbaseRect;
-    game.winCardReplaybaseRect = {game.winCardRect.x + game.winCardRect.w / 2 - 100 * game.app->scale,game.winCardRect.y + game.winCardRect.h - 80 * game.app->scale,200 * game.app->scale,50 * game.app->scale};
-    // game.winCardReplayRect = game.winCardReplaybaseRect;
-    replay.rect = replay.baserect= game.winCardReplaybaseRect;
+
+    game.winCardReplaybaseRect = {game.winCardRect.x + game.winCardRect.w / 2 - 100 * game.app->scale,
+                    game.winCardRect.y + game.winCardRect.h - 80 * game.app->scale,
+                        200 * game.app->scale,50 * game.app->scale};
+    game.replay.icon = LoadIcon(renderer,(basePath / "replay.png").string().c_str());
+    game.replay.rect = game.replay.baserect= game.winCardReplaybaseRect;
 
     //sidemenuitem background
-    game.sidemenuitembgTex = LoadIcon(renderer,(basePath / "icons/sidemenuitem.png").string().c_str());
-    SDL_SetTextureAlphaMod(game.sidemenuitembgTex, 100);
-    game.sidemenuitembgbaseRect={app->WIDTH-84*app->scale,472,313,664};
-    game.sidemenuitembgRect=game.sidemenuitembgbaseRect;
+    game.sidemenuitembg.icon = LoadIcon(renderer,(basePath / "sidemenuitem.png").string().c_str());
+    SDL_SetTextureAlphaMod(game.sidemenuitembg.icon, 100);
+    game.sidemenuitembg.baserect={app->WIDTH-84*app->scale,472,313,664};
+    game.sidemenuitembg.rect=game.sidemenuitembg.baserect;
+
     //logo image
-    game.logoTex = LoadIcon(renderer,(basePath / "logo.png").string().c_str());
-    game.logobaseRect = {8,(float)game.app->HEIGHT-57,110,53};
-    game.logoRect = game.logobaseRect;
-    game.logobgbaseRect = {0,(float)game.app->HEIGHT-59,125,59};
-    game.logobgRect = game.logobgbaseRect;
-    game.logobgTex = LoadIcon(renderer,(basePath / "logobg.png").string().c_str());
-    SDL_SetTextureAlphaMod(game.logobgTex, 100);
+    game.logo.icon = LoadIcon(renderer,(basePath / "logo.png").string().c_str());
+    game.logo.baserect = {8,(float)game.app->HEIGHT-57,110,53};
+    game.logo.rect = game.logo.baserect;
+    game.logobg.icon = LoadIcon(renderer,(basePath / "logobg.png").string().c_str());
+    SDL_SetTextureAlphaMod(game.logobg.icon, 100);
+    game.logobg.baserect = {0,(float)game.app->HEIGHT-59,125,59};
+    game.logobg.rect = game.logobg.baserect;
+
+
     //turn : massage
     const std::string_view text = "Turn :";
     SDL_Surface* msgSurf = TTF_RenderText_Solid(app->font, text.data(), text.length(), {255,255,255,255});
-    game.turnTex = SDL_CreateTextureFromSurface(app->renderer, msgSurf);
+    game.turn.icon = SDL_CreateTextureFromSurface(app->renderer, msgSurf);
     SDL_DestroySurface(msgSurf);
-    // auto props = SDL_GetTextureProperties(game.turnTex);
+
+    // turn frame
     float bw, bh;
-    SDL_GetTextureSize(game.turnTex, &bw, &bh);
-    game.turnbaseRect = {(280-bw)/2,60,bw,bh};    
-    game.turnRect = game.turnbaseRect;
+    SDL_GetTextureSize(game.turn.icon, &bw, &bh);
+    game.turn.baserect = {(280-bw)/2,60,bw,bh};    
+    game.turn.rect = game.turn.baserect;
     //turn bg image
-    game.turnbgTex = LoadIcon(renderer,(basePath / "tictactoepic/turnbg.png").string().c_str());
-    // SDL_GetTextureSize(game.turnbgTex, &bw, &bh);
-    game.turnbgbaseRect = {(280-170)/2,145,170,170};
-    game.turnbgRect = game.turnbgbaseRect;
+    game.turnbg.icon = LoadIcon(renderer,(basePath / "tictactoepic/turnbg.png").string().c_str());
+    game.turnbg.baserect = {(280-170)/2,145,170,170};
+    game.turnbg.rect = game.turnbg.baserect;
+
     //turn image
-    game.turnimagebaseRect = {(280-125)/2,145+(170-125)/2,125,125};
-    game.turnimageRect = game.turnimagebaseRect;
+    game.turnimage.baserect = {(280-125)/2,145+(170-125)/2,125,125};
+    game.turnimage.rect = game.turnimage.baserect;
+
     //cell frame 
     float startX = 300;
     float startY = 0;
@@ -144,6 +152,8 @@ void TicTacToe_Init(TicTacToe& game, SDL_Renderer* renderer, App* app) {
             game.cellRects[y][x] = game.cellBaseRects[y][x];
         }
     }
+
+    //load x and o images
     game.ximageTex=LoadIcon(renderer,(basePath / "tictactoepic/x.png").string().c_str());
     game.oimageTex=LoadIcon(renderer,(basePath / "tictactoepic/o.png").string().c_str());
 
@@ -151,11 +161,11 @@ void TicTacToe_Init(TicTacToe& game, SDL_Renderer* renderer, App* app) {
 }
 void tic_switched(TicTacToe& game){
     
-    ApplyUIScale(game.app->scale,game.logoRect,game.logobaseRect);
-    ApplyUIScale(game.app->scale,game.logobgRect,game.logobgbaseRect);
-    ApplyUIScale(game.app->scale,game.turnRect,game.turnbaseRect);
-    ApplyUIScale(game.app->scale,game.turnbgRect,game.turnbgbaseRect);
-    ApplyUIScale(game.app->scale,game.turnimageRect,game.turnimagebaseRect);
+    ApplyUIScale(game.app->scale,game.logo.rect,game.logo.baserect);
+    ApplyUIScale(game.app->scale,game.logobg.rect,game.logobg.baserect);
+    ApplyUIScale(game.app->scale,game.turn.rect,game.turn.baserect);
+    ApplyUIScale(game.app->scale,game.turnbg.rect,game.turnbg.baserect);
+    ApplyUIScale(game.app->scale,game.turnimage.rect,game.turnimage.baserect);
     //x-o frame
     ApplyUIScale(game.app->scale,game.xoFrame,game.xobaseFrame);
     ApplyUIScale(game.app->scale,game.vertical_line_1,game.base_vertical_line_1);
@@ -171,9 +181,9 @@ void tic_switched(TicTacToe& game){
         ApplyUIScale(game.app->scale,game.cellRects[y][x],game.cellBaseRects[y][x]);
     CheckWinnerWithLine(game);
 
-    game.logoRect.y=game.app->HEIGHT-57*game.app->scale;
-    game.logobgRect.y=game.app->HEIGHT-59*game.app->scale;
-    game.sidemenuitembgRect.x=game.app->WIDTH-84*game.app->scale;
+    game.logo.rect.y=game.app->HEIGHT-57*game.app->scale;
+    game.logobg.rect.y=game.app->HEIGHT-59*game.app->scale;
+    game.sidemenuitembg.rect.x=game.app->WIDTH-84*game.app->scale;
 
 }
 bool PointInRect(int x, int y, const SDL_FRect& r) {
@@ -185,15 +195,17 @@ void ResetGame(TicTacToe& game) {
     game.gameOver = false;
     game.winner = 0;
     game.hasWinLine = false;
-
+    SDL_SetRenderDrawBlendMode(game.app->renderer, SDL_BLENDMODE_NONE);
+    
 }
 
 void TicTacToe_HandleEvent(TicTacToe& game, SDL_Event* e) {
     if (e->type == SDL_EVENT_WINDOW_RESIZED){
         tic_switched(game);
-        // ApplyUIScale(game.app->scale,game.sidemenuitembgRect,game.sidemenuitembgbaseRect);
     }
+
     if (e->key.key == SDLK_R ) ResetGame(game);
+
     if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
         int mx = e->button.x;
         int my = e->button.y;
@@ -237,21 +249,18 @@ void TicTacToe_HandleEvent(TicTacToe& game, SDL_Event* e) {
     
 
 }
-void TicTacToe_Update(TicTacToe&) {
-    // منطق بازی بعداً اینجا میاد
-}
 
 void TicTacToe_Render(TicTacToe& game, SDL_Renderer* renderer) {
-    SDL_RenderTexture(renderer, game.logobgTex, nullptr, &game.logobgRect);
-    SDL_RenderTexture(renderer, game.logoTex, nullptr, &game.logoRect);
-    SDL_RenderTexture(renderer, game.sidemenuitembgTex, nullptr, &game.sidemenuitembgRect);
-    game.sidemenuitembgRect.y=game.app->sideButtons[0].ui.rect.y-20;
-    if(game.xTurn)SDL_RenderTexture(renderer, game.ximageTex, nullptr, &game.turnimageRect);
-    if(!game.xTurn)SDL_RenderTexture(renderer, game.oimageTex, nullptr, &game.turnimageRect);
+    SDL_RenderTexture(renderer, game.logobg.icon, nullptr, &game.logobg.rect);
+    SDL_RenderTexture(renderer, game.logo.icon, nullptr, &game.logo.rect);
+    SDL_RenderTexture(renderer, game.sidemenuitembg.icon, nullptr, &game.sidemenuitembg.rect);
+    game.sidemenuitembg.rect.y=game.app->sideButtons[0].ui.rect.y-20;
+    if(game.xTurn)SDL_RenderTexture(renderer, game.ximageTex, nullptr, &game.turnimage.rect);
+    if(!game.xTurn)SDL_RenderTexture(renderer, game.oimageTex, nullptr, &game.turnimage.rect);
     SidePanel_Render(game.app, renderer);
 
-    SDL_RenderTexture(renderer, game.turnTex, nullptr, &game.turnRect);
-    SDL_RenderTexture(renderer, game.turnbgTex, nullptr, &game.turnbgRect);
+    SDL_RenderTexture(renderer, game.turn.icon, nullptr, &game.turn.rect);
+    SDL_RenderTexture(renderer, game.turnbg.icon, nullptr, &game.turnbg.rect);
     
     //x-o frame
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
@@ -328,6 +337,9 @@ if (game.gameOver) {
     SDL_SetRenderDrawColor(renderer, 50, 171, 141, 255);
     SDL_RenderFillRect(renderer, &game.winCardReplayRect);
     
+    SDL_RenderTexture(renderer, game.replay.icon, nullptr, &game.replay.rect);
+
+    
 
 }
 
@@ -336,8 +348,11 @@ if (game.gameOver) {
 }
 
 void TicTacToe_Quit(TicTacToe& game) {
-    SDL_DestroyTexture(game.logoTex);
-    SDL_DestroyTexture(game.logobgTex);
-    SDL_DestroyTexture(game.turnTex);
-    SDL_DestroyTexture(game.turnbgTex);
+    SDL_DestroyTexture(game.logo.icon);
+    SDL_DestroyTexture(game.logobg.icon);
+    SDL_DestroyTexture(game.turn.icon);
+    SDL_DestroyTexture(game.turnbg.icon);
+    SDL_DestroyTexture(game.turnimage.icon);
+    SDL_DestroyTexture(game.winTextTex);
+    SDL_DestroyTexture(game.replay.icon);
 }
