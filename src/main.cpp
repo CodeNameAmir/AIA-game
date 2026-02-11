@@ -22,57 +22,6 @@ struct Star {
 };
 std::vector<Star> stars;
 
-
-// struct App {
-//     // Core
-//     TicTacToe tic;
-//     Menu menu;
-//     GameState state = GameState::Menu;
-//     SDL_Window*   window   = nullptr;
-//     SDL_Renderer* renderer = nullptr;
-//     SDL_AppResult quitState = SDL_APP_CONTINUE;
-//     float scalex=1.0;
-//     float scaley=1.0;
-//     int WIDTH,HEIGHT;
-
-//     // -------- Audio --------
-//     MIX_Mixer* mixer = nullptr;
-//     MIX_Track* musicTrack = nullptr;
-//     bool musicPaused = false;
-//     float volume = 0.0f;   // 0.0 تا 1.0
-//     Slider volumeSlider;
-
-//     // -------- Text --------
-//     TTF_Font* font = nullptr;
-//     //mouse position
-//     float mouseX = 0.0f;
-//     float mouseY = 0.0f;
-
-//     // -------- Textures --------
-    
-
-    
-
-//     // -------- FPS --------
-//     Uint64 lastCounter = 0;
-//     int frameCount = 0;
-//     float fps = 0.0f;
-//     Slider fpsSlider;
-//     bool limitFPS = true;
-//     int targetFPS = 60;
-//     float targetFPSFloat = 75.0f;
-//     double FRAME_TIME = 1000.0 / targetFPS; // ms
-//     SDL_Texture* fpsTex = nullptr;
-//     SDL_FRect fpsRect{};
-
-    
-
-// };
-
-
-// --------------------------------------------------
-// Utility
-// --------------------------------------------------
 SDL_AppResult Fail(const char* msg) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s: %s", msg, SDL_GetError());
     return SDL_APP_FAILURE;
@@ -86,6 +35,86 @@ std::filesystem::path GetBasePath() {
     return std::filesystem::path(base);
 #endif
 }
+SDL_Texture* LoadIcon(SDL_Renderer* r, const std::string& path) {
+    SDL_Surface* s = IMG_Load(path.c_str());
+    if (!s) {
+        SDL_Log("Failed to load %s", path.c_str());
+        return nullptr;
+    }
+    SDL_Texture* t = SDL_CreateTextureFromSurface(r, s);
+    SDL_DestroySurface(s);
+    return t;
+}
+void ApplyUIScale(float scale,SDL_FRect& item,const SDL_FRect& itembase) {
+        item.x = itembase.x * scale;
+        item.y = itembase.y * scale;
+        item.w = itembase.w * scale;
+        item.h = itembase.h * scale;
+}
+void InitSidePanel(App* app)
+{
+    float gap = 20.0f;
+    float size = 56.0f;
+
+    float rightMargin = 20.0f;   // فاصله از راست
+    float bottomMargin = 20.0f;  // فاصله از پایین
+
+    float panelX = 1280 - rightMargin - size;
+    float startY = 720 - bottomMargin - (size * 3 + gap * 2);
+    
+    for (int i = 0; i < 3; i++) {
+        SideButton b{};
+        b.ui.baserect = {
+            panelX,
+            startY + i * (size + gap),
+            size,
+            size
+        };
+        b.ui.spacey=app->HEIGHT-b.ui.baserect.y;
+        app->sideButtons.push_back(b);
+    }
+    auto basePath = GetBasePath();
+    app->sideButtons[0].ui.icon = LoadIcon(app->renderer, (basePath / "about.png").string().c_str());
+    app->sideButtons[1].ui.icon = LoadIcon(app->renderer, (basePath / "setting.png").string().c_str());
+    app->sideButtons[2].ui.icon = LoadIcon(app->renderer, (basePath / "exit.png").string().c_str());
+}
+bool PointInRect(float mx, float my, const SDL_FRect& r) {
+    return mx >= r.x && mx <= r.x + r.w &&
+           my >= r.y && my <= r.y + r.h;
+}
+void UpdateHover(UIItem& item, float mx, float my) {
+    item.hovered = PointInRect(mx, my, item.rect);
+}
+void RendersidepanelItem(SDL_Renderer* r, UIItem& item, float uiScale,App* app,Menu& game) {
+    float scale = item.hovered ? item.hoverScale : 1.0f;
+    Uint8 alpha = item.hovered ? item.hoverAlpha : item.normalAlpha;
+
+    SDL_FRect dst = item.baserect;
+    dst.w *= scale;
+    dst.h *= scale;
+    dst.x -= (dst.w - item.baserect.w) / 2;
+    dst.y -= (dst.h - item.baserect.h) / 2;
+
+    ApplyUIScale(uiScale, item.rect, dst);
+    item.rect.x=app->WIDTH-70*app->scale;
+    item.rect.y = app->HEIGHT-item.spacey*app->scale;
+    game.sidemenuitembgRect.y=game.app->sideButtons[0].ui.rect.y-20;
+
+    SDL_SetTextureAlphaMod(item.icon, alpha);
+    SDL_RenderTexture(r, item.icon, nullptr, &item.rect);
+    
+}
+void SidePanel_Render(App* app, SDL_Renderer* r) {
+    for (auto& b : app->sideButtons) {
+        UpdateHover(b.ui, app->mouseX, app->mouseY);
+        RendersidepanelItem(r, b.ui, app->scale, app, app->menu);
+    }
+}
+
+// --------------------------------------------------
+// Utility
+// --------------------------------------------------
+
 
 
 // --------------------------------------------------
@@ -225,8 +254,8 @@ SDL_AppResult SDL_AppInit(void** state, int, char**) {
         }
     }
     Menu_Init(app->menu,app->renderer,app);
-    TicTacToe_Init(app->tic,app->renderer);
-
+    TicTacToe_Init(app->tic,app->renderer,app);
+    InitSidePanel(app);
     return SDL_APP_CONTINUE;
 }
 
@@ -235,7 +264,7 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
     
     if (e->type == SDL_EVENT_QUIT)
         app->quitState = SDL_APP_SUCCESS;
-
+    
     if (e->type == SDL_EVENT_WINDOW_RESIZED){
         UpdateFPSText(app);
         // int width, height;
@@ -258,16 +287,26 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
         
 
     if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        float mx = e->button.x;
-        float my = e->button.y;
+    for (int i = 0; i < app->sideButtons.size(); i++) {
+        auto& r = app->sideButtons[i].ui.rect;
+        if (app->mouseX >= r.x && app->mouseX <= r.x + r.w &&
+            app->mouseY >= r.y && app->mouseY <= r.y + r.h) {
+            if (i == 0) SDL_Log("about");
+            if (i == 1) SDL_Log("setting");
+            if (i == 2) app->quitState = SDL_APP_SUCCESS;
+        }
+    
+    }
+        // float mx = e->button.x;
+        // float my = e->button.y;
 
-        auto hit = [&](SDL_FRect& r) {
-            return mx >= r.x && mx <= r.x + r.w &&
-                my >= r.y && my <= r.y + r.h;
-        };
+        // auto hit = [&](SDL_FRect& r) {
+        //     return mx >= r.x && mx <= r.x + r.w &&
+        //         my >= r.y && my <= r.y + r.h;
+        // };
 
-        if (hit(app->volumeSlider.knob)) app->volumeSlider.dragging = true;
-        if (hit(app->fpsSlider.knob)) app->fpsSlider.dragging = true;
+        // if (hit(app->volumeSlider.knob)) app->volumeSlider.dragging = true;
+        // if (hit(app->fpsSlider.knob)) app->fpsSlider.dragging = true;
     }
     if (e->type == SDL_EVENT_MOUSE_BUTTON_UP) {
         app->volumeSlider.dragging = false;
@@ -298,7 +337,7 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
     if (e->type == SDL_EVENT_KEY_DOWN) {
     // std::cout << char(e->key.key) << std::endl;
     // SDL_Keycode key = e->key.key;
-    SDL_Log("pressed key : %s",SDL_GetKeyName(e->key.key));
+    
     switch (e->key.key) {
 
 
@@ -337,13 +376,16 @@ SDL_AppResult SDL_AppEvent(void* state, SDL_Event* e) {
     case SDLK_G:
         if (app->state == GameState::TIC_TAC_TOE){
         app->state = GameState::Menu;
+        menu_switched(app->menu);
         SDL_Log("Switched to Menu");
         }
         else if (app->state == GameState::Menu){
         app->state = GameState::TIC_TAC_TOE;
+        tic_switched(app->tic);
         SDL_Log("Switched to Tic Tac Toe");
         }
-        
+    default:
+        SDL_Log("pressed key : %s",SDL_GetKeyName(e->key.key));
     }
 }
     if (app->state == GameState::TIC_TAC_TOE){

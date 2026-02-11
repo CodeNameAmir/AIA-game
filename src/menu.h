@@ -64,3 +64,5 @@ void Menu_Update(Menu& game);
 void Menu_Render(Menu& game, SDL_Renderer* renderer);
 void Menu_HandleEvent(Menu& game, SDL_Event* e);
 void Menu_Quit(Menu& game);
+
+void menu_switched(Menu& game);

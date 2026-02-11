@@ -10,7 +10,13 @@
 // struct Slider;
 // struct Menu;
 // struct TicTacToe;
-
+void ApplyUIScale(float scale,SDL_FRect& item,const SDL_FRect& itembase) ;
+SDL_Texture* LoadIcon(SDL_Renderer* r, const std::string& path) ;
+void UpdateHover(UIItem& item, float mx, float my) ;
+bool PointInRect(float mx, float my, const SDL_FRect& r) ;
+void SidePanel_Render(App* app, SDL_Renderer* r) ;
+void RendersidepanelItem(SDL_Renderer* r, UIItem& item, float uiScale,App* app,Menu& game) ;
+void InitSidePanel(App* app);
 enum class GameState {
     Menu,
     TIC_TAC_TOE
