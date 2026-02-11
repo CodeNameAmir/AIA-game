@@ -5,7 +5,7 @@
 
 #include <vector>
 #include "slider.h"
-#include "Menu.h"
+#include "menu.h"
 #include "TicTacToe.h"
 // struct Slider;
 // struct Menu;

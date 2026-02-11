@@ -1,338 +1,345 @@
 #include "TicTacToe.h"
-#include "main.h"
-#include "App.h"
-#include <SDL3_image/SDL_image.h>
-#include <filesystem>
 
-static std::filesystem::path GetBasePath() {
+#include "App.h"
+#include "main.h"
+
+#include <cmath>
+#include <cstring>
+#include <filesystem>
+#include <string_view>
+
+namespace {
+
+constexpr int kBoardSize = 3;
+constexpr float kBoardStartX = 300.0f;
+constexpr float kBoardStartY = 0.0f;
+constexpr float kCellSize = 240.0f;
+constexpr float kMarkSize = 180.0f;
+constexpr float kWinLineThickness = 6.0f;
+
+std::filesystem::path GetBasePath() {
     const char* base = SDL_GetBasePath();
-    if (!base) return "";
+    if (!base) {
+        return "";
+    }
+
     return std::filesystem::path(base);
 }
 
+bool IsCellInsidePoint(int x, int y, const SDL_FRect& rect) {
+    return x >= rect.x && x <= rect.x + rect.w &&
+           y >= rect.y && y <= rect.y + rect.h;
+}
+
+void UpdateWinTextTexture(TicTacToe& game, const char* text) {
+    SDL_DestroyTexture(game.winTextTex);
+    game.winTextTex = nullptr;
+
+    SDL_Surface* surface = TTF_RenderText_Blended(game.app->font, text, SDL_strlen(text), {255, 255, 255});
+    game.winTextTex = SDL_CreateTextureFromSurface(game.app->renderer, surface);
+    SDL_DestroySurface(surface);
+}
+
+bool IsBoardFull(const int board[kBoardSize][kBoardSize]) {
+    for (int y = 0; y < kBoardSize; ++y) {
+        for (int x = 0; x < kBoardSize; ++x) {
+            if (board[y][x] == 0) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+void SetWinLine(TicTacToe& game, const SDL_FRect& startRect, const SDL_FRect& endRect) {
+    game.hasWinLine = true;
+    game.winLineStart = {startRect.x + startRect.w / 2, startRect.y + startRect.h / 2};
+    game.winLineEnd = {endRect.x + endRect.w / 2, endRect.y + endRect.h / 2};
+}
+
 int CheckWinnerWithLine(TicTacToe& game) {
-    auto& b = game.board;
+    auto& board = game.board;
 
-    // rows
-    for (int y = 0; y < 3; y++) {
-        if (b[y][0] && b[y][0] == b[y][1] && b[y][1] == b[y][2]) {
-            game.hasWinLine = true;
-            game.winLineStart = {
-                game.cellRects[y][0].x + game.cellRects[y][0].w / 2,
-                game.cellRects[y][0].y + game.cellRects[y][0].h / 2
-            };
-            game.winLineEnd = {
-                game.cellRects[y][2].x + game.cellRects[y][2].w / 2,
-                game.cellRects[y][2].y + game.cellRects[y][2].h / 2
-            };
-            return b[y][0];
+    for (int y = 0; y < kBoardSize; ++y) {
+        if (board[y][0] != 0 && board[y][0] == board[y][1] && board[y][1] == board[y][2]) {
+            SetWinLine(game, game.cellRects[y][0], game.cellRects[y][2]);
+            return board[y][0];
         }
     }
 
-    // columns
-    for (int x = 0; x < 3; x++) {
-        if (b[0][x] && b[0][x] == b[1][x] && b[1][x] == b[2][x]) {
-            game.hasWinLine = true;
-            game.winLineStart = {
-                game.cellRects[0][x].x + game.cellRects[0][x].w / 2,
-                game.cellRects[0][x].y + game.cellRects[0][x].h / 2
-            };
-            game.winLineEnd = {
-                game.cellRects[2][x].x + game.cellRects[2][x].w / 2,
-                game.cellRects[2][x].y + game.cellRects[2][x].h / 2
-            };
-            return b[0][x];
+    for (int x = 0; x < kBoardSize; ++x) {
+        if (board[0][x] != 0 && board[0][x] == board[1][x] && board[1][x] == board[2][x]) {
+            SetWinLine(game, game.cellRects[0][x], game.cellRects[2][x]);
+            return board[0][x];
         }
     }
 
-    // diagonal 
-    if (b[0][0] && b[0][0] == b[1][1] && b[1][1] == b[2][2]) {
-        game.hasWinLine = true;
-        game.winLineStart = {
-            game.cellRects[0][0].x + game.cellRects[0][0].w / 2,
-            game.cellRects[0][0].y + game.cellRects[0][0].h / 2
-        };
-        game.winLineEnd = {
-            game.cellRects[2][2].x + game.cellRects[2][2].w / 2,
-            game.cellRects[2][2].y + game.cellRects[2][2].h / 2
-        };
-        return b[0][0];
+    if (board[0][0] != 0 && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
+        SetWinLine(game, game.cellRects[0][0], game.cellRects[2][2]);
+        return board[0][0];
     }
 
-    // diagonal 
-    if (b[0][2] && b[0][2] == b[1][1] && b[1][1] == b[2][0]) {
-        game.hasWinLine = true;
-        game.winLineStart = {
-            game.cellRects[0][2].x + game.cellRects[0][2].w / 2,
-            game.cellRects[0][2].y + game.cellRects[0][2].h / 2
-        };
-        game.winLineEnd = {
-            game.cellRects[2][0].x + game.cellRects[2][0].w / 2,
-            game.cellRects[2][0].y + game.cellRects[2][0].h / 2
-        };
-        return b[0][2];
+    if (board[0][2] != 0 && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
+        SetWinLine(game, game.cellRects[0][2], game.cellRects[2][0]);
+        return board[0][2];
     }
 
     return 0;
 }
 
-bool IsBoardFull(int board[3][3]) {
-    for (int y = 0; y < 3; y++)
-        for (int x = 0; x < 3; x++)
-            if (board[y][x] == 0)
-                return false;
-    return true;
-}
+void UpdateLayoutWithScale(TicTacToe& game) {
+    ApplyUIScale(game.app->scale, game.logoRect, game.logobaseRect);
+    ApplyUIScale(game.app->scale, game.logobgRect, game.logobgbaseRect);
+    ApplyUIScale(game.app->scale, game.turnRect, game.turnbaseRect);
+    ApplyUIScale(game.app->scale, game.turnbgRect, game.turnbgbaseRect);
+    ApplyUIScale(game.app->scale, game.turnimageRect, game.turnimagebaseRect);
 
-void TicTacToe_Init(TicTacToe& game, SDL_Renderer* renderer, App* app) {
-    auto basePath = GetBasePath();
-    game.app=app;
-    UIItem replay; 
-    //Win Card
-    game.winCardBaseRect = {game.app->WIDTH / 2.f - 220,game.app->HEIGHT / 2.f - 150,440,300};
-    game.winCardRect = game.winCardBaseRect;
-    game.winCardtextbaseRect = {game.winCardRect.x + (game.winCardRect.w - 187) / 2,game.winCardRect.y + 18 * game.app->scale,187,44};
-    game.winCardtextRect = game.winCardtextbaseRect;
-    game.winCardReplaybaseRect = {game.winCardRect.x + game.winCardRect.w / 2 - 100 * game.app->scale,game.winCardRect.y + game.winCardRect.h - 80 * game.app->scale,200 * game.app->scale,50 * game.app->scale};
-    // game.winCardReplayRect = game.winCardReplaybaseRect;
-    replay.rect = replay.baserect= game.winCardReplaybaseRect;
+    ApplyUIScale(game.app->scale, game.xoFrame, game.xobaseFrame);
+    ApplyUIScale(game.app->scale, game.vertical_line_1, game.base_vertical_line_1);
+    ApplyUIScale(game.app->scale, game.vertical_line_2, game.base_vertical_line_2);
+    ApplyUIScale(game.app->scale, game.horizontal_line_1, game.base_horizontal_line_1);
+    ApplyUIScale(game.app->scale, game.horizontal_line_2, game.base_horizontal_line_2);
 
-    //sidemenuitem background
-    game.sidemenuitembgTex = LoadIcon(renderer,(basePath / "icons/sidemenuitem.png").string().c_str());
-    SDL_SetTextureAlphaMod(game.sidemenuitembgTex, 100);
-    game.sidemenuitembgbaseRect={app->WIDTH-84*app->scale,472,313,664};
-    game.sidemenuitembgRect=game.sidemenuitembgbaseRect;
-    //logo image
-    game.logoTex = LoadIcon(renderer,(basePath / "logo.png").string().c_str());
-    game.logobaseRect = {8,(float)game.app->HEIGHT-57,110,53};
-    game.logoRect = game.logobaseRect;
-    game.logobgbaseRect = {0,(float)game.app->HEIGHT-59,125,59};
-    game.logobgRect = game.logobgbaseRect;
-    game.logobgTex = LoadIcon(renderer,(basePath / "logobg.png").string().c_str());
-    SDL_SetTextureAlphaMod(game.logobgTex, 100);
-    //turn : massage
-    const std::string_view text = "Turn :";
-    SDL_Surface* msgSurf = TTF_RenderText_Solid(app->font, text.data(), text.length(), {255,255,255,255});
-    game.turnTex = SDL_CreateTextureFromSurface(app->renderer, msgSurf);
-    SDL_DestroySurface(msgSurf);
-    // auto props = SDL_GetTextureProperties(game.turnTex);
-    float bw, bh;
-    SDL_GetTextureSize(game.turnTex, &bw, &bh);
-    game.turnbaseRect = {(280-bw)/2,60,bw,bh};    
-    game.turnRect = game.turnbaseRect;
-    //turn bg image
-    game.turnbgTex = LoadIcon(renderer,(basePath / "tictactoepic/turnbg.png").string().c_str());
-    // SDL_GetTextureSize(game.turnbgTex, &bw, &bh);
-    game.turnbgbaseRect = {(280-170)/2,145,170,170};
-    game.turnbgRect = game.turnbgbaseRect;
-    //turn image
-    game.turnimagebaseRect = {(280-125)/2,145+(170-125)/2,125,125};
-    game.turnimageRect = game.turnimagebaseRect;
-    //cell frame 
-    float startX = 300;
-    float startY = 0;
-    float cellSize = 240;
-
-    for (int y = 0; y < 3; y++) {
-        for (int x = 0; x < 3; x++) {
-            game.cellBaseRects[y][x] = {
-                startX + x * cellSize,
-                startY + y * cellSize,
-                cellSize,
-                cellSize
-            };
-            game.cellRects[y][x] = game.cellBaseRects[y][x];
-        }
-    }
-    game.ximageTex=LoadIcon(renderer,(basePath / "tictactoepic/x.png").string().c_str());
-    game.oimageTex=LoadIcon(renderer,(basePath / "tictactoepic/o.png").string().c_str());
-
-    
-}
-void tic_switched(TicTacToe& game){
-    
-    ApplyUIScale(game.app->scale,game.logoRect,game.logobaseRect);
-    ApplyUIScale(game.app->scale,game.logobgRect,game.logobgbaseRect);
-    ApplyUIScale(game.app->scale,game.turnRect,game.turnbaseRect);
-    ApplyUIScale(game.app->scale,game.turnbgRect,game.turnbgbaseRect);
-    ApplyUIScale(game.app->scale,game.turnimageRect,game.turnimagebaseRect);
-    //x-o frame
-    ApplyUIScale(game.app->scale,game.xoFrame,game.xobaseFrame);
-    ApplyUIScale(game.app->scale,game.vertical_line_1,game.base_vertical_line_1);
-    ApplyUIScale(game.app->scale,game.vertical_line_2,game.base_vertical_line_2);
-    ApplyUIScale(game.app->scale,game.horizontal_line_1,game.base_horizontal_line_1);
-    ApplyUIScale(game.app->scale,game.horizontal_line_2,game.base_horizontal_line_2);
     ApplyUIScale(game.app->scale, game.winCardRect, game.winCardBaseRect);
     ApplyUIScale(game.app->scale, game.winCardtextRect, game.winCardtextbaseRect);
     ApplyUIScale(game.app->scale, game.winCardReplayRect, game.winCardReplaybaseRect);
 
-    for (int y = 0; y < 3; y++)
-    for (int x = 0; x < 3; x++)
-        ApplyUIScale(game.app->scale,game.cellRects[y][x],game.cellBaseRects[y][x]);
+    for (int y = 0; y < kBoardSize; ++y) {
+        for (int x = 0; x < kBoardSize; ++x) {
+            ApplyUIScale(game.app->scale, game.cellRects[y][x], game.cellBaseRects[y][x]);
+        }
+    }
+
     CheckWinnerWithLine(game);
 
-    game.logoRect.y=game.app->HEIGHT-57*game.app->scale;
-    game.logobgRect.y=game.app->HEIGHT-59*game.app->scale;
-    game.sidemenuitembgRect.x=game.app->WIDTH-84*game.app->scale;
+    game.logoRect.y = game.app->HEIGHT - 57 * game.app->scale;
+    game.logobgRect.y = game.app->HEIGHT - 59 * game.app->scale;
+    game.sidemenuitembgRect.x = game.app->WIDTH - 84 * game.app->scale;
+}
 
+void RenderBoardMarks(TicTacToe& game, SDL_Renderer* renderer) {
+    for (int y = 0; y < kBoardSize; ++y) {
+        for (int x = 0; x < kBoardSize; ++x) {
+            if (game.board[y][x] == 0) {
+                continue;
+            }
+
+            SDL_FRect drawRect{};
+            drawRect.w = kMarkSize * game.app->scale;
+            drawRect.h = kMarkSize * game.app->scale;
+            drawRect.x = game.cellRects[y][x].x + (game.cellRects[y][x].w - drawRect.w) / 2;
+            drawRect.y = game.cellRects[y][x].y + (game.cellRects[y][x].h - drawRect.h) / 2;
+
+            SDL_Texture* texture = (game.board[y][x] == 1) ? game.ximageTex : game.oimageTex;
+            SDL_RenderTexture(renderer, texture, nullptr, &drawRect);
+        }
+    }
 }
-bool PointInRect(int x, int y, const SDL_FRect& r) {
-    return x >= r.x && x <= r.x + r.w &&y >= r.y && y <= r.y + r.h;
+
+void RenderWinLine(TicTacToe& game, SDL_Renderer* renderer) {
+    if (!game.hasWinLine) {
+        return;
+    }
+
+    const float pulseAlpha = std::sin(SDL_GetTicks() / 750.0f) / 2.0f * 255.0f;
+    SDL_SetRenderDrawColor(renderer, 50, 171, 141, static_cast<Uint8>(pulseAlpha));
+
+    const float dx = game.winLineEnd.x - game.winLineStart.x;
+    const float dy = game.winLineEnd.y - game.winLineStart.y;
+    const float len = std::sqrt(dx * dx + dy * dy);
+
+    const float nx = -dy / len;
+    const float ny = dx / len;
+    const float thickness = kWinLineThickness * game.app->scale;
+
+    for (int i = -static_cast<int>(thickness); i <= static_cast<int>(thickness); ++i) {
+        SDL_RenderLine(
+            renderer,
+            game.winLineStart.x + nx * i,
+            game.winLineStart.y + ny * i,
+            game.winLineEnd.x + nx * i,
+            game.winLineEnd.y + ny * i);
+    }
 }
+
+void RenderGameOverOverlay(TicTacToe& game, SDL_Renderer* renderer) {
+    if (!game.gameOver) {
+        return;
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 170);
+    SDL_FRect overlay = {0, 0, static_cast<float>(game.app->WIDTH), static_cast<float>(game.app->HEIGHT)};
+    SDL_RenderFillRect(renderer, &overlay);
+
+    SDL_SetRenderDrawColor(renderer, 20, 40, 80, 240);
+    SDL_RenderFillRect(renderer, &game.winCardRect);
+
+    SDL_SetRenderDrawColor(renderer, 50, 171, 141, 255);
+    SDL_RenderRect(renderer, &game.winCardRect);
+
+    SDL_RenderTexture(renderer, game.winTextTex, nullptr, &game.winCardtextRect);
+
+    SDL_SetRenderDrawColor(renderer, 50, 171, 141, 255);
+    SDL_RenderFillRect(renderer, &game.winCardReplayRect);
+}
+
 void ResetGame(TicTacToe& game) {
-    memset(game.board, 0, sizeof(game.board));
+    std::memset(game.board, 0, sizeof(game.board));
     game.xTurn = true;
     game.gameOver = false;
     game.winner = 0;
     game.hasWinLine = false;
 
+    UpdateWinTextTexture(game, "PERFECT BALANCE");
+}
+
+}  // namespace
+
+void TicTacToe_Init(TicTacToe& game, SDL_Renderer* renderer, App* app) {
+    auto basePath = GetBasePath();
+    game.app = app;
+
+    game.sidemenuitembgTex = LoadIcon(renderer, (basePath / "sidemenuitem.png").string().c_str());
+    SDL_SetTextureAlphaMod(game.sidemenuitembgTex, 100);
+
+    game.logoTex = LoadIcon(renderer, (basePath / "logo.png").string().c_str());
+    game.logobgTex = LoadIcon(renderer, (basePath / "logobg.png").string().c_str());
+    SDL_SetTextureAlphaMod(game.logobgTex, 100);
+
+    game.turnbgTex = LoadIcon(renderer, (basePath / "tictactoepic/turnbg.png").string().c_str());
+    game.ximageTex = LoadIcon(renderer, (basePath / "tictactoepic/x.png").string().c_str());
+    game.oimageTex = LoadIcon(renderer, (basePath / "tictactoepic/o.png").string().c_str());
+
+    game.winCardBaseRect = {game.app->WIDTH / 2.0f - 220, game.app->HEIGHT / 2.0f - 150, 440, 300};
+    game.winCardRect = game.winCardBaseRect;
+    game.winCardtextbaseRect = {game.winCardRect.x + (game.winCardRect.w - 187) / 2, game.winCardRect.y + 18 * game.app->scale, 187, 44};
+    game.winCardtextRect = game.winCardtextbaseRect;
+    game.winCardReplaybaseRect = {
+        game.winCardRect.x + game.winCardRect.w / 2 - 100 * game.app->scale,
+        game.winCardRect.y + game.winCardRect.h - 80 * game.app->scale,
+        200 * game.app->scale,
+        50 * game.app->scale,
+    };
+    game.winCardReplayRect = game.winCardReplaybaseRect;
+
+    game.sidemenuitembgbaseRect = {app->WIDTH - 84 * app->scale, 472, 313, 664};
+    game.sidemenuitembgRect = game.sidemenuitembgbaseRect;
+
+    game.logobaseRect = {8, static_cast<float>(game.app->HEIGHT - 57), 110, 53};
+    game.logoRect = game.logobaseRect;
+    game.logobgbaseRect = {0, static_cast<float>(game.app->HEIGHT - 59), 125, 59};
+    game.logobgRect = game.logobgbaseRect;
+
+    const std::string_view turnText = "Turn :";
+    SDL_Surface* turnSurface = TTF_RenderText_Solid(app->font, turnText.data(), turnText.length(), {255, 255, 255, 255});
+    game.turnTex = SDL_CreateTextureFromSurface(app->renderer, turnSurface);
+    SDL_DestroySurface(turnSurface);
+
+    float turnWidth = 0.0f;
+    float turnHeight = 0.0f;
+    SDL_GetTextureSize(game.turnTex, &turnWidth, &turnHeight);
+    game.turnbaseRect = {(280 - turnWidth) / 2, 60, turnWidth, turnHeight};
+    game.turnRect = game.turnbaseRect;
+
+    game.turnbgbaseRect = {(280 - 170) / 2, 145, 170, 170};
+    game.turnbgRect = game.turnbgbaseRect;
+
+    game.turnimagebaseRect = {(280 - 125) / 2, 145 + (170 - 125) / 2, 125, 125};
+    game.turnimageRect = game.turnimagebaseRect;
+
+    for (int y = 0; y < kBoardSize; ++y) {
+        for (int x = 0; x < kBoardSize; ++x) {
+            game.cellBaseRects[y][x] = {
+                kBoardStartX + x * kCellSize,
+                kBoardStartY + y * kCellSize,
+                kCellSize,
+                kCellSize,
+            };
+            game.cellRects[y][x] = game.cellBaseRects[y][x];
+        }
+    }
+
+    ResetGame(game);
+}
+
+void tic_switched(TicTacToe& game) {
+    UpdateLayoutWithScale(game);
 }
 
 void TicTacToe_HandleEvent(TicTacToe& game, SDL_Event* e) {
-    if (e->type == SDL_EVENT_WINDOW_RESIZED){
+    if (e->type == SDL_EVENT_WINDOW_RESIZED) {
         tic_switched(game);
-        // ApplyUIScale(game.app->scale,game.sidemenuitembgRect,game.sidemenuitembgbaseRect);
     }
-    if (e->key.key == SDLK_R ) ResetGame(game);
-    if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-        int mx = e->button.x;
-        int my = e->button.y;
-        if (game.gameOver) return;
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
 
-                if (PointInRect(mx, my, game.cellRects[y][x]) &&
-                    game.board[y][x] == 0) {
+    if (e->type == SDL_EVENT_KEY_DOWN && e->key.key == SDLK_R) {
+        ResetGame(game);
+    }
 
-                    game.board[y][x] = game.xTurn ? 1 : 2;
-                    game.xTurn = !game.xTurn;
-                    
-                    // check winner
-                    int w = CheckWinnerWithLine(game);
-                    if (w == 0) const char* txt = "PERFECT BALANCE";
+    if (e->type != SDL_EVENT_MOUSE_BUTTON_DOWN || e->button.button != SDL_BUTTON_LEFT || game.gameOver) {
+        return;
+    }
 
-                    if (w != 0) {
-                        game.gameOver = true;
-                        game.winner = w;
-                        const char* txt = (w == 1) ? "X TAKES IT" : "O TAKES IT";
-                        SDL_Surface* s = TTF_RenderText_Blended(game.app->font, txt, SDL_strlen(txt),{255,255,255});
-                        game.winTextTex = SDL_CreateTextureFromSurface(game.app->renderer, s);
-                        SDL_DestroySurface(s);
-                        SDL_Log("WINNER: %s", w == 1 ? "X" : "O");
-                        return;
-                    }
-                    // check draw
-                    if (IsBoardFull(game.board)) {
-                        game.gameOver = true;
-                        game.winner = 0;
-                        SDL_Log("DRAW!");
-                    }
+    const int mouseX = e->button.x;
+    const int mouseY = e->button.y;
 
-                    SDL_Log("Clicked cell: %d , %d\t turn :%s", x, y,(!game.xTurn)?"x":"y");
-                    return; 
-                }
+    for (int y = 0; y < kBoardSize; ++y) {
+        for (int x = 0; x < kBoardSize; ++x) {
+            if (!IsCellInsidePoint(mouseX, mouseY, game.cellRects[y][x]) || game.board[y][x] != 0) {
+                continue;
             }
+
+            game.board[y][x] = game.xTurn ? 1 : 2;
+            game.xTurn = !game.xTurn;
+
+            const int winner = CheckWinnerWithLine(game);
+            if (winner != 0) {
+                game.gameOver = true;
+                game.winner = winner;
+                UpdateWinTextTexture(game, winner == 1 ? "X TAKES IT" : "O TAKES IT");
+                SDL_Log("WINNER: %s", winner == 1 ? "X" : "O");
+                return;
+            }
+
+            if (IsBoardFull(game.board)) {
+                game.gameOver = true;
+                game.winner = 0;
+                UpdateWinTextTexture(game, "PERFECT BALANCE");
+                SDL_Log("DRAW!");
+            }
+
+            SDL_Log("Clicked cell: %d , %d\t turn :%s", x, y, (!game.xTurn) ? "x" : "y");
+            return;
         }
     }
-    
+}
 
-}
-void TicTacToe_Update(TicTacToe&) {
-    // منطق بازی بعداً اینجا میاد
-}
+void TicTacToe_Update(TicTacToe&) {}
 
 void TicTacToe_Render(TicTacToe& game, SDL_Renderer* renderer) {
+    game.sidemenuitembgRect.y = game.app->sideButtons[0].ui.rect.y - 20;
+
     SDL_RenderTexture(renderer, game.logobgTex, nullptr, &game.logobgRect);
     SDL_RenderTexture(renderer, game.logoTex, nullptr, &game.logoRect);
     SDL_RenderTexture(renderer, game.sidemenuitembgTex, nullptr, &game.sidemenuitembgRect);
-    game.sidemenuitembgRect.y=game.app->sideButtons[0].ui.rect.y-20;
-    if(game.xTurn)SDL_RenderTexture(renderer, game.ximageTex, nullptr, &game.turnimageRect);
-    if(!game.xTurn)SDL_RenderTexture(renderer, game.oimageTex, nullptr, &game.turnimageRect);
-    SidePanel_Render(game.app, renderer);
 
     SDL_RenderTexture(renderer, game.turnTex, nullptr, &game.turnRect);
     SDL_RenderTexture(renderer, game.turnbgTex, nullptr, &game.turnbgRect);
-    
-    //x-o frame
+    SDL_RenderTexture(renderer, game.xTurn ? game.ximageTex : game.oimageTex, nullptr, &game.turnimageRect);
+
+    SidePanel_Render(game.app, renderer);
+
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 100);
-    SDL_RenderRect(renderer,&game.xoFrame);
-    SDL_RenderFillRect(renderer,&game.vertical_line_1);
-    SDL_RenderFillRect(renderer,&game.vertical_line_2);
-    SDL_RenderFillRect(renderer,&game.horizontal_line_1);
-    SDL_RenderFillRect(renderer,&game.horizontal_line_2);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100);
-    // SDL_Log("nobate %i",game.xTurn);
-    for (int y = 0; y < 3; y++) {
-        for (int x = 0; x < 3; x++) {
+    SDL_RenderRect(renderer, &game.xoFrame);
+    SDL_RenderFillRect(renderer, &game.vertical_line_1);
+    SDL_RenderFillRect(renderer, &game.vertical_line_2);
+    SDL_RenderFillRect(renderer, &game.horizontal_line_1);
+    SDL_RenderFillRect(renderer, &game.horizontal_line_2);
 
-            if (game.board[y][x] != 0) {
-
-                SDL_FRect drawRect;
-                drawRect.w = 180 * game.app->scale;
-                drawRect.h = 180 * game.app->scale;
-                drawRect.x =game.cellRects[y][x].x +(game.cellRects[y][x].w - drawRect.w) / 2;
-                drawRect.y =game.cellRects[y][x].y +(game.cellRects[y][x].h - drawRect.h) / 2;
-
-                if (game.board[y][x] == 1)
-                    SDL_RenderTexture(renderer, game.ximageTex, nullptr, &drawRect);
-
-                else if (game.board[y][x] == 2)
-                    SDL_RenderTexture(renderer, game.oimageTex, nullptr, &drawRect);
-            }
-        }
-    }
-
-    if (game.hasWinLine) {
-    float pulse = sin(SDL_GetTicks() / 750.f)/ 2.0 * 255;
-    SDL_SetRenderDrawColor(renderer, 50, 171, 141, pulse);
-        
-    float x1 = game.winLineStart.x;
-    float y1 = game.winLineStart.y;
-    float x2 = game.winLineEnd.x;
-    float y2 = game.winLineEnd.y;
-
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float len = sqrtf(dx*dx + dy*dy);
-
-    float nx = -dy / len;
-    float ny =  dx / len;
-
-    float thickness = 6.0f * game.app->scale;
-
-    for (int i = -thickness; i <= thickness; i++) {
-        SDL_RenderLine(renderer,
-            x1 + nx * i,
-            y1 + ny * i,
-            x2 + nx * i,
-            y2 + ny * i
-        );
-    }
-    
-}
-if (game.gameOver) {
-    // float tw, th;
-    // SDL_GetTextureSize(game.winTextTex, &tw, &th);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 170); // overlay
-    SDL_FRect overlay = {0, 0, (float)game.app->WIDTH, (float)game.app->HEIGHT};
-    SDL_RenderFillRect(renderer, &overlay);
-
-    SDL_SetRenderDrawColor(renderer, 20, 40, 80, 240);
-    SDL_RenderFillRect(renderer, &game.winCardRect);
-    SDL_SetRenderDrawColor(renderer, 50, 171, 141, 255);
-    SDL_RenderRect(renderer, &game.winCardRect);
-    // SDL_FRect textRect = {game.winCardRect.x + (game.winCardRect.w - tw) / 2,game.winCardRect.y + 18 * game.app->scale,tw*game.app->scale,th*game.app->scale};
-    SDL_RenderTexture(renderer, game.winTextTex, nullptr, &game.winCardtextRect);
-    SDL_SetRenderDrawColor(renderer, 50, 171, 141, 255);
-    SDL_RenderFillRect(renderer, &game.winCardReplayRect);
-    
-
-}
-
-
-
+    RenderBoardMarks(game, renderer);
+    RenderWinLine(game, renderer);
+    RenderGameOverOverlay(game, renderer);
 }
 
 void TicTacToe_Quit(TicTacToe& game) {
@@ -340,4 +347,8 @@ void TicTacToe_Quit(TicTacToe& game) {
     SDL_DestroyTexture(game.logobgTex);
     SDL_DestroyTexture(game.turnTex);
     SDL_DestroyTexture(game.turnbgTex);
+    SDL_DestroyTexture(game.ximageTex);
+    SDL_DestroyTexture(game.oimageTex);
+    SDL_DestroyTexture(game.sidemenuitembgTex);
+    SDL_DestroyTexture(game.winTextTex);
 }
